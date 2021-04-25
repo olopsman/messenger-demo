@@ -26,11 +26,17 @@ struct SignUpView: View {
                 VStack{
                     TextField("Email Address", text: $email)
                         .modifier(CustomField())
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
                     TextField("Username", text: $username)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
                         .modifier(CustomField())
                     SecureField("Password", text: $password)
                         .modifier(CustomField())
-                    
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+
                     Button(action: {self.signUp()}, label: {
                         Text("Sign Up")
                             .foregroundColor(Color.white)
@@ -51,6 +57,7 @@ struct SignUpView: View {
               password.count >= 6 else {
                 return
               }
+        model.signUp(email: email, username: username, password: password)
     }
 }
 

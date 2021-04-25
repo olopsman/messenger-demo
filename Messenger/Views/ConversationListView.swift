@@ -67,7 +67,7 @@ struct ConversationListView: View {
     }
     
     func signOut() {
-        
+        model.signOut()
     }
 }
 

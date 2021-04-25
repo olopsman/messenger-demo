@@ -23,6 +23,10 @@ class AppStateModel: ObservableObject {
     var auth = Auth.auth()
     var otherUsername = ""
     //messages, conversations
+    
+    init(){
+        self.showingSignIn = Auth.auth().currentUser == nil
+    }
 }
 //search
 extension AppStateModel {
@@ -57,16 +61,64 @@ extension AppStateModel {
 //sign in
 extension AppStateModel {
     func signIn(username: String, password: String) {
-        
+        //try to sign in
+        //get email from DB
+        database.collection("users").document(username).getDocument { [weak self] snapshot, error in
+            guard let email = snapshot?.data()?["email"] as? String, error == nil else {
+                return
+            }
+            //try to sign in
+            self?.auth.signIn(withEmail: email, password: password, completion: { result, error in
+                guard error == nil, result != nil else {
+                    return
+                }
+                DispatchQueue.main.async {
+                    self?.currentUsername = username
+                    self?.currentEmail = email
+                    self?.showingSignIn = false
+                }
+            })
+        }
+     
     }
     
     func signUp(email: String, username: String, password: String) {
         //create account
-        auth.createUser(withEmail: email, password: <#T##String#>, completion: <#T##((AuthDataResult?, Error?) -> Void)?##((AuthDataResult?, Error?) -> Void)?##(AuthDataResult?, Error?) -> Void#>)
-        //inset username into database
+        auth.createUser(withEmail: email, password: password) {[weak self]result, error in
+         guard result != nil, error == nil else {
+                return
+            }
+            //inset username into database
+            let data = [
+                "email": email,
+                "username": username
+            ]
+            
+            self?.database
+                .collection("users")
+                .document(username)
+                .setData(data){ error in
+                    guard error == nil else {
+                        return
+                    }
+                    DispatchQueue.main.async {
+                        self?.currentUsername = username
+                        self?.currentEmail = email
+                        self?.showingSignIn = false
+                    }
+                }
+        }
     }
     
     func signOut(){
-        
+        do {
+            try auth.signOut()
+            DispatchQueue.main.async{
+                self.showingSignIn = true
+            }
+        }
+        catch {
+            print(error)
+        }
     }
 }
