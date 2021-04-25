@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct ConversationListView: View {
-    let usernames = ["Joe", "Jill", "Bob"]
     @EnvironmentObject var model: AppStateModel
     
     @State var otherUsername: String = ""
@@ -17,7 +16,7 @@ struct ConversationListView: View {
     var body: some View {
         NavigationView {
             ScrollView(.vertical) {
-                ForEach(usernames, id: \.self) {name in
+                ForEach(model.conversations, id: \.self) {name in
                     NavigationLink(
                         destination: ChatView(otherUsername: name),
                         label: {
@@ -63,6 +62,12 @@ struct ConversationListView: View {
             .fullScreenCover(isPresented: $model.showingSignIn, content: {
                 SignInView()
             })
+            .onAppear{
+                guard model.auth.currentUser != nil else {
+                    return
+                }
+                model.getConversations()
+            }
         }
     }
     

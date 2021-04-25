@@ -23,6 +23,7 @@ class AppStateModel: ObservableObject {
     var auth = Auth.auth()
     var otherUsername = ""
     //messages, conversations
+    var conversationsLitenr: ListenerRegistration?
     
     init(){
         self.showingSignIn = Auth.auth().currentUser == nil
@@ -31,7 +32,16 @@ class AppStateModel: ObservableObject {
 //search
 extension AppStateModel {
     func searchUsers(queryText: String, completion: @escaping ([String]) -> Void) {
-        
+        database.collection("users").getDocuments {snapshot, error in
+            guard let usernames = snapshot?.documents.compactMap({$0.documentID}), error == nil else {
+                completion([])
+                return
+            }
+            let filtered = usernames.filter({
+                $0.lowercased().hasPrefix(queryText.lowercased())
+            })
+            completion(filtered)
+        }
     }
     
 }
@@ -40,7 +50,15 @@ extension AppStateModel {
 extension AppStateModel {
     func getConversations() {
         //Listen for conversations
-        
+        conversationsLitenr = database.collection("users").document(currentUsername).collection("chats").addSnapshotListener { [weak self]snapshot, error in
+            guard let usernames = snapshot?.documents.compactMap({$0.documentID}), error == nil else {
+                return
+            }
+            DispatchQueue.main.async {
+                self?.conversations = usernames
+            }
+            
+        }
     }
 }
 
