@@ -12,6 +12,7 @@ struct ConversationListView: View {
     
     @State var otherUsername: String = ""
     @State var showChat: Bool = false
+    @State var showSearch: Bool = false
     
     var body: some View {
         NavigationView {
@@ -21,9 +22,12 @@ struct ConversationListView: View {
                         destination: ChatView(otherUsername: name),
                         label: {
                             HStack {
-                                Circle()
+                                Image(model.currentUsername == "paulo" ? "photo1" : "photo2")
+                                    .resizable()
+                                    .scaledToFit()
                                     .frame(width: 65, height: 65)
                                     .foregroundColor(Color.pink)
+                                    .clipShape(Circle())
                                 Text(name)
                                     .bold()
                                     .foregroundColor(Color(.label))
@@ -49,11 +53,13 @@ struct ConversationListView: View {
                 ToolbarItem(placement: ToolbarItemPlacement.navigationBarTrailing) {
                     NavigationLink(
                         destination: SearchView{name in
+                            self.showSearch = false
                             DispatchQueue.main.asyncAfter(deadline: .now()+1){
-                                self.otherUsername = name
                                 self.showChat = true
+                                self.otherUsername = name
                             }
                         },
+                        isActive: $showSearch,
                         label: {
                             Image(systemName: "magnifyingglass")
                         })

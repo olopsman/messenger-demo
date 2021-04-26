@@ -23,7 +23,8 @@ class AppStateModel: ObservableObject {
     var auth = Auth.auth()
     var otherUsername = ""
     //messages, conversations
-    var conversationsLitenr: ListenerRegistration?
+    var conversationsListener: ListenerRegistration?
+    var chatListener: ListenerRegistration?
     
     init(){
         self.showingSignIn = Auth.auth().currentUser == nil
@@ -50,7 +51,7 @@ extension AppStateModel {
 extension AppStateModel {
     func getConversations() {
         //Listen for conversations
-        conversationsLitenr = database.collection("users").document(currentUsername).collection("chats").addSnapshotListener { [weak self]snapshot, error in
+        conversationsListener = database.collection("users").document(currentUsername).collection("chats").addSnapshotListener { [weak self]snapshot, error in
             guard let usernames = snapshot?.documents.compactMap({$0.documentID}), error == nil else {
                 return
             }
@@ -65,13 +66,71 @@ extension AppStateModel {
 //get chat /messages
 extension AppStateModel {
     func observeChat() {
-        
+        createConversation()
+        //Listen for conversations
+        chatListener = database.collection("users")
+            .document(currentUsername)
+            .collection("chats")
+            .document(otherUsername)
+            .collection("messages")
+            .addSnapshotListener { [weak self]snapshot, error in
+            guard let objects = snapshot?.documents.compactMap({$0.data()}), error == nil else {
+                return
+            }
+            let messages = objects.compactMap({
+                return Message(text: $0["text"] as? String ?? ""
+                               , type: $0["sender"] as? String == self?.currentUsername ? .sent : .received
+                               , created: ISO8601DateFormatter().date(from: $0["created"] as? String ?? "") ?? Date()
+                )
+            })
+            .sorted(by: {first, second in
+                return first.created <  second.created
+            })
+            DispatchQueue.main.async {
+                self?.messages = messages
+            }
+            
+        }
     }
     func sendMessage(text: String) {
+        let newMesageId = UUID().uuidString
         
+        let data = [
+            "text": text,
+            "sender": currentUsername,
+            "created": ISO8601DateFormatter().string(from: Date())
+        ]
+        //insert two messages in the database
+        database.collection("users")
+            .document(currentUsername)
+            .collection("chats")
+            .document(otherUsername)
+            .collection("messages")
+            .document(newMesageId)
+            .setData(data)
+        
+        
+        database.collection("users")
+            .document(otherUsername)
+            .collection("chats")
+            .document(currentUsername)
+            .collection("messages")
+            .document(newMesageId)
+            .setData(data)
     }
-    func createConversationIfNeeded() {
-        
+    func createConversation() {
+        //create conversation on first user
+        database.collection("users")
+            .document(currentUsername)
+            .collection("chats")
+            .document(otherUsername).setData(["created":"true"])
+
+        ///create converstation on other user
+        database.collection("users")
+            .document(otherUsername)
+            .collection("chats")
+            .document(currentUsername).setData(["created":"true"])
+
     }
 }
 
